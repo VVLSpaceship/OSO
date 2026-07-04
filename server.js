@@ -17,7 +17,14 @@ app.use(express.static(path.join(__dirname)));
 // ============================================================
 // DATABASE
 // ============================================================
-const db = new DatabaseSync(path.join(__dirname, 'vvleague.db'));
+// Database location
+// On Render, DATABASE_PATH should be set to /var/data/vvleague.db
+// Locally, it falls back to ./vvleague.db
+const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, 'vvleague.db');
+
+console.log(`Using database: ${DB_PATH}`);
+
+const db = new DatabaseSync(DB_PATH);
 db.exec("PRAGMA journal_mode = WAL");
 
 db.exec(`
@@ -731,5 +738,5 @@ app.listen(PORT, () => {
   console.log(`   ╚████╔╝  ╚████╔╝ ███████╗███████╗██║  ██║╚██████╔╝╚██████╔╝███████╗`);
   console.log(`    ╚═══╝    ╚═══╝  ╚══════╝╚══════╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚══════╝\n`);
   console.log(`  Server running at  →  http://localhost:${PORT}`);
-  console.log(`  Database           →  vvleague.db\n`);
+  console.log(`  Database           →  ${DB_PATH}\n`);
 });
