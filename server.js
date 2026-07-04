@@ -98,7 +98,7 @@ try { db.exec('ALTER TABLE war_logs ADD COLUMN elo_org2 INTEGER DEFAULT NULL'); 
 // ============================================================
 // ORGS / MEMBERS / PLAYERS TABLES
 // ============================================================
-.exec(`
+db.exec(`
   CREATE TABLE IF NOT EXISTS orgs (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     tag        TEXT NOT NULL UNIQUE,
