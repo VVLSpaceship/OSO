@@ -17,7 +17,8 @@ app.use(express.static(path.join(__dirname)));
 // ============================================================
 // DATABASE
 // ============================================================
-const db = new DatabaseSync(path.join(__dirname, 'vvleague.db'));
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'vvleague.db');
+const db = new DatabaseSync(dbPath);
 db.exec("PRAGMA journal_mode = WAL");
 
 db.exec(`
@@ -91,13 +92,13 @@ db.exec(`
 `);
 
 // Migrate: add elo columns to war_logs if not present
-try { db.exec('ALTER TABLE war_logs ADD COLUMN elo_org1 INTEGER DEFAULT NULL'); } catch(e) {}
-try { db.exec('ALTER TABLE war_logs ADD COLUMN elo_org2 INTEGER DEFAULT NULL'); } catch(e) {}
+try { .exec('ALTER TABLE war_logs ADD COLUMN elo_org1 INTEGER DEFAULT NULL'); } catch(e) {}
+try { .exec('ALTER TABLE war_logs ADD COLUMN elo_org2 INTEGER DEFAULT NULL'); } catch(e) {}
 
 // ============================================================
 // ORGS / MEMBERS / PLAYERS TABLES
 // ============================================================
-db.exec(`
+.exec(`
   CREATE TABLE IF NOT EXISTS orgs (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     tag        TEXT NOT NULL UNIQUE,
@@ -129,9 +130,9 @@ db.exec(`
 `);
 
 // Seed orgs if empty
-if (!db.prepare('SELECT COUNT(*) as c FROM orgs').get().c) {
-  const insOrg = db.prepare('INSERT INTO orgs (tag,name,status,founded,region,icon,mvp) VALUES (?,?,?,?,?,?,?)');
-  const insMem = db.prepare('INSERT INTO org_members (org_id,name,role) VALUES (?,?,?)');
+if (!.prepare('SELECT COUNT(*) as c FROM orgs').get().c) {
+  const insOrg = .prepare('INSERT INTO orgs (tag,name,status,founded,region,icon,mvp) VALUES (?,?,?,?,?,?,?)');
+  const insMem = .prepare('INSERT INTO org_members (org_id,name,role) VALUES (?,?,?)');
   [
     { tag:'VVS', name:'VVS Esports',  status:'active',   founded:'Season 1', region:'NA',   icon:'⚡', mvp:'ShadowX',    members:[{name:'ShadowX',role:'Leader'},{name:'NightFox',role:'Player'},{name:'BladeRush',role:'Player'},{name:'ColdWave',role:'Player'},{name:'IronGhost',role:'Sub'}] },
     { tag:'NXS', name:'Nexus Gaming', status:'active',   founded:'Season 1', region:'NA',   icon:'🔷', mvp:'PhoenixR',   members:[{name:'PhoenixR',role:'Leader'},{name:'VoltEdge',role:'Player'},{name:'StormByte',role:'Player'},{name:'DarkPulse',role:'Player'}] },
