@@ -17,8 +17,7 @@ app.use(express.static(path.join(__dirname)));
 // ============================================================
 // DATABASE
 // ============================================================
-const dbPath = process.env.DB_PATH || path.join(__dirname, 'vvleague.db');
-const db = new DatabaseSync(dbPath);
+const db = new DatabaseSync(path.join(__dirname, 'vvleague.db'));
 db.exec("PRAGMA journal_mode = WAL");
 
 db.exec(`
@@ -130,9 +129,9 @@ db.exec(`
 `);
 
 // Seed orgs if empty
-if (!.prepare('SELECT COUNT(*) as c FROM orgs').get().c) {
-  const insOrg = .prepare('INSERT INTO orgs (tag,name,status,founded,region,icon,mvp) VALUES (?,?,?,?,?,?,?)');
-  const insMem = .prepare('INSERT INTO org_members (org_id,name,role) VALUES (?,?,?)');
+if (!db.prepare('SELECT COUNT(*) as c FROM orgs').get().c) {
+  const insOrg = db.prepare('INSERT INTO orgs (tag,name,status,founded,region,icon,mvp) VALUES (?,?,?,?,?,?,?)');
+  const insMem = db.prepare('INSERT INTO org_members (org_id,name,role) VALUES (?,?,?)');
   [
     { tag:'VVS', name:'VVS Esports',  status:'active',   founded:'Season 1', region:'NA',   icon:'⚡', mvp:'ShadowX',    members:[{name:'ShadowX',role:'Leader'},{name:'NightFox',role:'Player'},{name:'BladeRush',role:'Player'},{name:'ColdWave',role:'Player'},{name:'IronGhost',role:'Sub'}] },
     { tag:'NXS', name:'Nexus Gaming', status:'active',   founded:'Season 1', region:'NA',   icon:'🔷', mvp:'PhoenixR',   members:[{name:'PhoenixR',role:'Leader'},{name:'VoltEdge',role:'Player'},{name:'StormByte',role:'Player'},{name:'DarkPulse',role:'Player'}] },
