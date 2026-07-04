@@ -92,8 +92,8 @@ db.exec(`
 `);
 
 // Migrate: add elo columns to war_logs if not present
-try { .exec('ALTER TABLE war_logs ADD COLUMN elo_org1 INTEGER DEFAULT NULL'); } catch(e) {}
-try { .exec('ALTER TABLE war_logs ADD COLUMN elo_org2 INTEGER DEFAULT NULL'); } catch(e) {}
+try { db.exec('ALTER TABLE war_logs ADD COLUMN elo_org1 INTEGER DEFAULT NULL'); } catch(e) {}
+try { db.exec('ALTER TABLE war_logs ADD COLUMN elo_org2 INTEGER DEFAULT NULL'); } catch(e) {}
 
 // ============================================================
 // ORGS / MEMBERS / PLAYERS TABLES
