@@ -1,0 +1,10 @@
+services:
+  vvleague:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./vvleague.db:/app/vvleague.db
+    env_file:
+      - .env
+    restart: unless-stopped

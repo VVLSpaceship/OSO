@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VVLeague</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+
+  <!-- ====== HEADER ====== -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo-wrap">
+        <div class="logo-icon">VV</div>
+        <div>
+          <div class="logo-text">VVLeague</div>
+          <div class="logo-sub">OFFICIAL COMPETITIVE SYSTEM</div>
+        </div>
+      </div>
+      <nav class="top-nav">
+        <button class="nav-tab active" data-tab="home"      onclick="switchMain('home')">HOME</button>
+        <button class="nav-tab"        data-tab="season"    onclick="switchMain('season')">SEASON</button>
+        <button class="nav-tab"        data-tab="logs"      onclick="switchMain('logs')">LOGS</button>
+        <button class="nav-tab"        data-tab="awards"    onclick="switchMain('awards')">AWARDS</button>
+        <button class="nav-tab"        data-tab="offseason" onclick="switchMain('offseason')">OFF SEASON</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ====== HOME PAGE ====== -->
+  <div id="pgHome" class="page active">
+    <section class="countdown-banner">
+      <div class="countdown-label" id="countdownEventName">LOADING...</div>
+      <div class="countdown-region" id="countdownEventRegion"></div>
+      <div class="countdown-timer">
+        <div class="cd-block"><span id="cdDays">00</span><label>DAYS</label></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-block"><span id="cdHours">00</span><label>HRS</label></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-block"><span id="cdMins">00</span><label>MIN</label></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-block"><span id="cdSecs">00</span><label>SEC</label></div>
+      </div>
+      <div class="upcoming-dots" id="upcomingDots"></div>
+    </section>
+
+    <div class="section-tabs">
+      <button class="sec-tab active" onclick="switchSection(this,'secOrgs')">ORG SEARCH</button>
+      <button class="sec-tab" onclick="switchSection(this,'secGuilds')">TOP GUILDS</button>
+      <button class="sec-tab" onclick="switchSection(this,'secTeams')">TEAMS</button>
+      <button class="sec-tab" onclick="switchSection(this,'secHomeRules'); loadRules('home')">RULES</button>
+    </div>
+
+    <section id="secOrgs" class="home-section active">
+      <div class="two-col">
+        <div class="col-panel">
+          <div class="col-title" style="display:flex;justify-content:space-between;align-items:center;">ORG SEARCH<button id="addOrgBtn" class="log-add-btn" style="display:none;" onclick="openOrgForm()">+ ADD ORG</button></div>
+          <div class="search-box">
+            <input type="text" id="orgSearchInput" class="search-input" placeholder="ORG NAME OR TAG..." oninput="renderOrgList()" autocomplete="off">
+            <div class="search-icon"><svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+          </div>
+          <div class="filter-row">
+            <button class="filter-btn active" onclick="setOrgFilter(this,'all')">ALL</button>
+            <button class="filter-btn" onclick="setOrgFilter(this,'active')">ACTIVE</button>
+            <button class="filter-btn" onclick="setOrgFilter(this,'inactive')">INACTIVE</button>
+          </div>
+          <div id="orgList" class="org-list"></div>
+          <div id="orgEmpty" class="empty-state" style="display:none;"><span class="empty-icon">◈</span><p>NO ORGS FOUND</p></div>
+        </div>
+        <div class="col-panel">
+          <div class="col-title">SEASON STATS</div>
+          <div class="sort-row">
+            <span class="sort-label">SORT:</span>
+            <button class="filter-btn active" onclick="sortStats(this,'wins')">W/L</button>
+            <button class="filter-btn" onclick="sortStats(this,'events')">EVENTS</button>
+            <button class="filter-btn" onclick="sortStats(this,'members')">MEMBERS</button>
+            <button class="filter-btn" onclick="sortStats(this,'wager')">WAGER</button>
+          </div>
+          <div class="stats-table-wrap">
+            <table class="stats-table">
+              <thead><tr><th>#</th><th>ORG</th><th>W/L</th><th>EVTS</th><th>MBR</th><th>MVP</th><th>WAGER</th></tr></thead>
+              <tbody id="statsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="secGuilds" class="home-section">
+      <div class="col-title" style="margin-bottom:1rem;">TOP GUILDS BY REGION</div>
+      <div class="region-tabs" id="guildRegionTabs">
+        <button class="rtab active" onclick="switchRegionGuild(this,'NA')">NA</button>
+        <button class="rtab" onclick="switchRegionGuild(this,'EU')">EU</button>
+        <button class="rtab" onclick="switchRegionGuild(this,'ASIA')">ASIA</button>
+        <button class="rtab" onclick="switchRegionGuild(this,'OCE')">OCE</button>
+        <button class="rtab" onclick="switchRegionGuild(this,'SA')">SA</button>
+      </div>
+      <div id="guildGrid" class="guild-grid"></div>
+    </section>
+
+    <section id="secTeams" class="home-section">
+      <div class="col-title" style="margin-bottom:1rem;">TEAMS BY REGION</div>
+      <div class="region-tabs" id="teamRegionTabs">
+        <button class="rtab active" onclick="switchRegionTeam(this,'NA')">NA</button>
+        <button class="rtab" onclick="switchRegionTeam(this,'EU')">EU</button>
+        <button class="rtab" onclick="switchRegionTeam(this,'ASIA')">ASIA</button>
+        <button class="rtab" onclick="switchRegionTeam(this,'OCE')">OCE</button>
+        <button class="rtab" onclick="switchRegionTeam(this,'SA')">SA</button>
+      </div>
+      <div id="teamGrid" class="team-grid"></div>
+    </section>
+
+    <section id="secHomeRules" class="home-section">
+      <div class="rules-header">
+        <div class="col-title">LEAGUE RULES</div>
+        <button id="editHomeRulesBtn" class="log-add-btn" style="display:none;" onclick="openRulesEditor('home')">✎ EDIT RULES</button>
+      </div>
+      <div id="homeRulesContent" class="rules-display"><div class="loading-state">LOADING...</div></div>
+    </section>
+  </div>
+
+  <!-- ====== SEASON PAGE ====== -->
+  <div id="pgSeason" class="page">
+    <div class="page-header"><h2 class="page-title">SEASON</h2></div>
+    <div class="section-tabs">
+      <button class="sec-tab active" onclick="switchSection(this,'secBrackets')">BRACKETS</button>
+      <button class="sec-tab" onclick="switchSection(this,'secSchedule')">SCHEDULE</button>
+    </div>
+
+    <section id="secBrackets" class="home-section active">
+      <div class="bracket-top-bar">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+          <div id="bracketSeasonTabs" class="region-tabs" style="margin-bottom:0;"></div>
+          <button id="newBracketBtn" class="log-add-btn" style="display:none;" onclick="openNewBracketForm()">+ NEW BRACKET</button>
+        </div>
+        <div id="bracketRegionTabs" class="region-tabs"></div>
+        <div class="admin-bar">
+          <span id="adminBadge" class="admin-badge" style="display:none;">⚙ ADMIN MODE</span>
+          <button id="manageUsersBtn" class="log-add-btn" style="display:none;margin-right:.4rem;" onclick="openAdminUsers()">MANAGE USERS</button>
+          <button id="adminLockBtn" class="admin-lock-btn" onclick="toggleAdminPanel()" title="Admin Login">🔒</button>
+          <button id="adminLogoutBtn" class="admin-logout-btn" onclick="adminLogout()" style="display:none;">LOGOUT</button>
+        </div>
+      </div>
+      <div id="bracketView" class="bracket-wrap"></div>
+    </section>
+
+    <section id="secSchedule" class="home-section">
+      <div class="logs-bar" style="margin-bottom:.6rem;">
+        <div class="filter-row" style="margin-bottom:0;">
+          <span class="sort-label">REGION:</span>
+          <button class="filter-btn active" onclick="filterSchedule(this,'ALL')">ALL</button>
+          <button class="filter-btn" onclick="filterSchedule(this,'NA')">NA</button>
+          <button class="filter-btn" onclick="filterSchedule(this,'EU')">EU</button>
+          <button class="filter-btn" onclick="filterSchedule(this,'ASIA')">ASIA</button>
+          <button class="filter-btn" onclick="filterSchedule(this,'OCE')">OCE</button>
+          <button class="filter-btn" onclick="filterSchedule(this,'SA')">SA</button>
+        </div>
+        <button id="addScheduleBtn" class="log-add-btn" style="display:none;" onclick="openScheduleForm()">+ ADD ENTRY</button>
+      </div>
+      <div class="stats-table-wrap">
+        <table class="stats-table">
+          <thead><tr><th>DATE</th><th>TIME (UTC)</th><th>MATCH</th><th>REGION</th><th>ROUND</th><th>STATUS</th><th id="schedActTh" style="display:none;"></th></tr></thead>
+          <tbody id="scheduleBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ====== LOGS PAGE ====== -->
+  <div id="pgLogs" class="page">
+    <div class="page-header">
+      <h2 class="page-title">LOGS</h2>
+      <p class="page-desc">War records, season history and wager tracking</p>
+    </div>
+    <div class="section-tabs">
+      <button class="sec-tab active" onclick="switchSection(this,'secWarLogs'); loadWarLogs()">WAR LOGS</button>
+      <button class="sec-tab" onclick="switchSection(this,'secSeasonLogs'); loadSeasonLogs()">SEASON LOGS</button>
+      <button class="sec-tab" onclick="switchSection(this,'secWagerRecords'); loadWagerRecords()">WAGER RECORDS</button>
+      <button class="sec-tab" onclick="switchSection(this,'secLogsRules'); loadRules('logs')">RULES</button>
+    </div>
+
+    <!-- WAR LOGS -->
+    <section id="secWarLogs" class="home-section active">
+      <div class="logs-bar">
+        <div class="filter-row" style="margin-bottom:0;">
+          <span class="sort-label">REGION:</span>
+          <button class="filter-btn active" onclick="setWarFilter(this,'region','ALL')">ALL</button>
+          <button class="filter-btn" onclick="setWarFilter(this,'region','NA')">NA</button>
+          <button class="filter-btn" onclick="setWarFilter(this,'region','EU')">EU</button>
+          <button class="filter-btn" onclick="setWarFilter(this,'region','ASIA')">ASIA</button>
+          <button class="filter-btn" onclick="setWarFilter(this,'region','OCE')">OCE</button>
+          <button class="filter-btn" onclick="setWarFilter(this,'region','SA')">SA</button>
+        </div>
+        <button id="addWarLogBtn" class="log-add-btn" style="display:none;" onclick="openLogForm('war')">+ ADD ENTRY</button>
+      </div>
+      <div id="warLogsWrap" class="stats-table-wrap" style="margin-top:.8rem;">
+        <table class="stats-table">
+          <thead><tr><th>DATE</th><th>MATCH</th><th>SCORE</th><th>WINNER</th><th>WAGER</th><th>ELO</th><th>REGION</th><th>SEASON</th><th>NOTES</th><th id="warActTh" style="display:none;"></th></tr></thead>
+          <tbody id="warLogsBody"></tbody>
+        </table>
+      </div>
+      <div id="warLogsEmpty" class="empty-state" style="display:none;"><span class="empty-icon">📋</span><p>NO WAR LOGS YET</p></div>
+      <div id="warLogsLoading" class="loading-state">LOADING...</div>
+    </section>
+
+    <!-- SEASON LOGS -->
+    <section id="secSeasonLogs" class="home-section">
+      <div class="logs-bar">
+        <div class="filter-row" style="margin-bottom:0;">
+          <span class="sort-label">SEASON:</span>
+          <div id="seasonLogSeasonBtns" class="filter-row" style="margin-bottom:0;gap:.3rem;"></div>
+        </div>
+        <button id="addSeasonLogBtn" class="log-add-btn" style="display:none;" onclick="openLogForm('season')">+ ADD ENTRY</button>
+      </div>
+      <div id="seasonLogsWrap" class="stats-table-wrap" style="margin-top:.8rem;">
+        <table class="stats-table">
+          <thead><tr><th>DATE</th><th>EVENT</th><th>MATCH</th><th>SCORE</th><th>WINNER</th><th>REGION</th><th>SEASON</th><th>NOTES</th><th id="seasonActTh" style="display:none;"></th></tr></thead>
+          <tbody id="seasonLogsBody"></tbody>
+        </table>
+      </div>
+      <div id="seasonLogsEmpty" class="empty-state" style="display:none;"><span class="empty-icon">📋</span><p>NO SEASON LOGS YET</p></div>
+      <div id="seasonLogsLoading" class="loading-state">LOADING...</div>
+    </section>
+
+    <!-- WAGER RECORDS -->
+    <section id="secWagerRecords" class="home-section">
+      <div class="logs-bar">
+        <div class="filter-row" style="margin-bottom:0;">
+          <span class="sort-label">STATUS:</span>
+          <button class="filter-btn active" onclick="setWagerFilter(this,'ALL')">ALL</button>
+          <button class="filter-btn" onclick="setWagerFilter(this,'pending')">PENDING</button>
+          <button class="filter-btn" onclick="setWagerFilter(this,'settled')">SETTLED</button>
+          <button class="filter-btn" onclick="setWagerFilter(this,'cancelled')">CANCELLED</button>
+        </div>
+        <button id="addWagerBtn" class="log-add-btn" style="display:none;" onclick="openLogForm('wager')">+ ADD ENTRY</button>
+      </div>
+      <div id="wagerWrap" class="stats-table-wrap" style="margin-top:.8rem;">
+        <table class="stats-table">
+          <thead><tr><th>DATE</th><th>CHALLENGER</th><th>CHALLENGED</th><th>AMOUNT</th><th>WINNER</th><th>STATUS</th><th>PAID</th><th>SEASON</th><th>NOTES</th><th id="wagerActTh" style="display:none;"></th></tr></thead>
+          <tbody id="wagerBody"></tbody>
+        </table>
+      </div>
+      <div id="wagerEmpty" class="empty-state" style="display:none;"><span class="empty-icon">💰</span><p>NO WAGER RECORDS YET</p></div>
+      <div id="wagerLoading" class="loading-state">LOADING...</div>
+    </section>
+
+    <!-- LOGS RULES -->
+    <section id="secLogsRules" class="home-section">
+      <div class="rules-header">
+        <div class="col-title">LOG RULES</div>
+        <button id="editLogsRulesBtn" class="log-add-btn" style="display:none;" onclick="openRulesEditor('logs')">✎ EDIT RULES</button>
+      </div>
+      <div id="logsRulesContent" class="rules-display"><div class="loading-state">LOADING...</div></div>
+    </section>
+  </div>
+
+  <!-- ====== AWARDS PAGE ====== -->
+  <div id="pgAwards" class="page">
+    <div class="page-header">
+      <h2 class="page-title">HALL OF FAME</h2>
+      <p class="page-desc">Tournament champions, MVPs and season award winners</p>
+    </div>
+    <div class="awards-season-bar">
+      <div id="awardsSeasonTabs" class="region-tabs"></div>
+      <button id="addAwardBtn" class="log-add-btn" style="display:none;" onclick="openAwardForm()">+ ADD AWARD</button>
+    </div>
+    <div id="awardsGrid" class="awards-grid"></div>
+    <div id="awardsEmpty" class="empty-state" style="display:none;"><span class="empty-icon">🏆</span><p>NO AWARDS YET</p></div>
+    <div id="awardsLoading" class="loading-state">LOADING...</div>
+  </div>
+
+  <!-- ====== OFF SEASON PAGE ====== -->
+  <div id="pgOffseason" class="page">
+    <div class="page-header">
+      <h2 class="page-title">OFF SEASON</h2>
+      <p class="page-desc">Pre-season Elo system and rankings</p>
+    </div>
+    <div class="section-tabs">
+      <button class="sec-tab active" onclick="switchSection(this,'secEloInfo')">ELO INFO</button>
+      <button class="sec-tab" onclick="switchSection(this,'secLeaderboard')">PLAYER LB</button>
+      <button class="sec-tab" onclick="switchSection(this,'secGuildLeaderboard');renderGuildLeaderboard()">GUILD LB</button>
+    </div>
+    <section id="secEloInfo" class="home-section active">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:.6rem;">
+        <button id="editEloInfoBtn" class="log-add-btn" style="display:none;" onclick="openEloInfoEditor()">✎ EDIT ELO INFO</button>
+      </div>
+      <div id="eloInfoContent" class="panel-box"><div class="loading-state">LOADING...</div></div>
+    </section>
+    <section id="secGuildLeaderboard" class="home-section">
+      <div class="stats-table-wrap">
+        <table class="leaderboard-table">
+          <thead><tr><th>#</th><th>ORG</th><th>TAG</th><th>POINTS</th><th>W/L</th><th>EVENTS</th><th>MEMBERS</th></tr></thead>
+          <tbody id="guildLbBody"></tbody>
+        </table>
+      </div>
+    </section>
+    <section id="secLeaderboard" class="home-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;">
+        <div class="search-box" style="margin-bottom:0;flex:1;margin-right:.6rem;">
+          <input type="text" id="lbSearch" class="search-input" placeholder="SEARCH PLAYER..." oninput="renderLeaderboard()" autocomplete="off">
+          <div class="search-icon"><svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+        </div>
+        <button id="addPlayerBtn" class="log-add-btn" style="display:none;" onclick="openPlayerForm()">+ ADD PLAYER</button>
+      </div>
+      <div class="stats-table-wrap">
+        <table class="leaderboard-table">
+          <thead><tr><th>#</th><th>PLAYER</th><th>ORG</th><th>ELO</th><th>TIER</th><th>W/L</th><th id="lbActTh" style="display:none;"></th></tr></thead>
+          <tbody id="lbBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ====== MODALS ====== -->
+
+  <!-- Org Detail Modal -->
+  <div id="orgModal" class="modal-overlay" onclick="maybeCloseModal(event)">
+    <div class="modal-box"><button class="modal-close" onclick="closeOrgModal()">✕</button><div id="modalContent"></div></div>
+  </div>
+
+  <!-- Admin Login Modal -->
+  <div id="adminLoginModal" class="modal-overlay" onclick="maybeCloseAdminModal(event)">
+    <div class="modal-box admin-modal-box">
+      <button class="modal-close" onclick="closeAdminLogin()">✕</button>
+      <div class="admin-modal-header">
+        <div class="admin-modal-icon">⚙</div>
+        <div class="admin-modal-title">ADMIN ACCESS</div>
+        <div class="admin-modal-sub">VVLeague — Restricted Area</div>
+      </div>
+      <div class="admin-form">
+        <div class="admin-field"><label class="admin-label">USERNAME</label><input type="text" id="adminUser" class="admin-input" placeholder="Enter username" autocomplete="off" onkeydown="if(event.key==='Enter')attemptLogin()"></div>
+        <div class="admin-field"><label class="admin-label">PASSWORD</label><input type="password" id="adminPass" class="admin-input" placeholder="Enter password" autocomplete="new-password" onkeydown="if(event.key==='Enter')attemptLogin()"></div>
+        <div id="loginError" class="login-error" style="display:none;">⚠ Invalid credentials</div>
+        <button class="admin-submit-btn" onclick="attemptLogin()">LOGIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Match Edit Modal (Bracket) -->
+  <div id="matchEditModal" class="modal-overlay" onclick="maybeCloseMatchModal(event)">
+    <div class="modal-box admin-modal-box"><button class="modal-close" onclick="closeMatchEdit()">✕</button><div id="matchEditContent"></div></div>
+  </div>
+
+  <!-- Log Entry Modal (War / Season / Wager) -->
+  <div id="logFormModal" class="modal-overlay" onclick="maybeCloseLogModal(event)">
+    <div class="modal-box admin-modal-box log-modal-box"><button class="modal-close" onclick="closeLogForm()">✕</button><div id="logFormContent"></div></div>
+  </div>
+
+  <!-- Award Form Modal -->
+  <div id="awardFormModal" class="modal-overlay" onclick="maybeCloseAwardModal(event)">
+    <div class="modal-box admin-modal-box"><button class="modal-close" onclick="closeAwardForm()">✕</button><div id="awardFormContent"></div></div>
+  </div>
+
+  <!-- Confirm Delete Modal -->
+  <div id="confirmModal" class="modal-overlay">
+    <div class="modal-box admin-modal-box" style="max-width:360px;text-align:center;">
+      <div class="admin-modal-icon" style="margin-bottom:.5rem;">⚠</div>
+      <div class="admin-modal-title" style="margin-bottom:.4rem;">CONFIRM DELETE</div>
+      <p id="confirmMsg" style="font-size:.88rem;color:var(--text);margin-bottom:1.2rem;letter-spacing:.05em;"></p>
+      <div class="admin-modal-actions">
+        <button class="admin-submit-btn" style="background:#f87171;flex:0 0 auto;padding:.6rem 1.4rem;" onclick="confirmDeleteYes()">DELETE</button>
+        <button class="admin-cancel-btn" onclick="closeConfirmModal()">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rules Editor Modal -->
+  <div id="rulesEditorModal" class="modal-overlay" onclick="maybeCloseRulesModal(event)">
+    <div class="modal-box admin-modal-box rules-modal-box">
+      <button class="modal-close" onclick="closeRulesEditor()">✕</button>
+      <div class="admin-modal-header" style="margin-bottom:1rem;">
+        <div class="admin-modal-icon">📋</div>
+        <div class="admin-modal-title" id="rulesModalTitle">EDIT RULES</div>
+        <div class="admin-modal-sub">Write rules freely. Supports line breaks.</div>
+      </div>
+      <textarea id="rulesTextarea" class="rules-textarea" placeholder="Write rules here...&#10;&#10;Example:&#10;1. All wars must be logged within 24h&#10;2. Wagers require admin approval&#10;..."></textarea>
+      <div class="admin-modal-actions" style="margin-top:.8rem;">
+        <button class="admin-submit-btn" onclick="saveRules()">SAVE</button>
+        <button class="admin-cancel-btn" onclick="closeRulesEditor()">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Users Modal -->
+  <div id="adminUsersModal" class="modal-overlay" onclick="maybeCloseAdminUsersModal(event)">
+    <div class="modal-box admin-modal-box" style="max-width:600px;">
+      <button class="modal-close" onclick="closeAdminUsers()">✕</button>
+      <div class="admin-modal-header" style="margin-bottom:1rem;">
+        <div class="admin-modal-icon">👥</div>
+        <div class="admin-modal-title">MANAGE ADMIN USERS</div>
+      </div>
+      <div style="margin-bottom:.8rem;">
+        <button class="log-add-btn" onclick="openAdminUserAddForm()">+ ADD USER</button>
+      </div>
+      <!-- Add/Edit form (hidden by default) -->
+      <div id="adminUserForm" style="display:none;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:1rem;margin-bottom:1rem;">
+        <input type="hidden" id="auf_id">
+        <div class="admin-form-grid-2">
+          <div class="admin-field"><label class="admin-label">USERNAME</label><input id="auf_username" class="admin-input" placeholder="username"></div>
+          <div class="admin-field"><label class="admin-label">PASSWORD (blank = no change)</label><input id="auf_pass" type="password" class="admin-input" placeholder="new password"></div>
+          <div class="admin-field" style="grid-column:span 2;">
+            <label class="admin-label" style="margin-bottom:.5rem;display:block;">PERMISSIONS</label>
+            <div id="auf_perms_tags" style="display:flex;flex-wrap:wrap;gap:.3rem;min-height:1.6rem;margin-bottom:.4rem;"></div>
+            <select id="auf_perms_sel" class="admin-select" onchange="addPermTag(this.value);this.value='';" style="width:auto;min-width:180px;">
+              <option value="">— Add permission —</option>
+              <option value="all">ALL ACCESS</option>
+              <option value="logs">LOGS</option>
+              <option value="wager">WAGER</option>
+              <option value="awards">AWARDS</option>
+              <option value="brackets">BRACKETS</option>
+              <option value="orgs">ORGS</option>
+              <option value="schedule">SCHEDULE</option>
+            </select>
+          </div>
+          <div class="admin-field" style="display:flex;align-items:center;gap:.5rem;padding-top:.4rem;">
+            <input type="checkbox" id="auf_active" checked>
+            <label for="auf_active" class="admin-label" style="margin:0;">ACTIVE</label>
+          </div>
+        </div>
+        <div class="admin-modal-actions" style="margin-top:.8rem;">
+          <button class="admin-submit-btn" onclick="saveAdminUser()">SAVE</button>
+          <button class="admin-cancel-btn" onclick="document.getElementById('adminUserForm').style.display='none'">CANCEL</button>
+        </div>
+      </div>
+      <!-- Users table -->
+      <table class="log-table" style="width:100%;">
+        <thead><tr><th>USERNAME</th><th>PERMS</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+        <tbody id="adminUsersTbody"><tr><td colspan="4" style="text-align:center;opacity:.5">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
