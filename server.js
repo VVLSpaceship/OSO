@@ -170,8 +170,11 @@ db.exec(`
   );
 `);
 
-// Seed players if empty
-if (!db.prepare('SELECT COUNT(*) as c FROM players').get().c) {
+// Do not auto-seed players in production.
+// Previously, if the PLAYER LB was emptied, the app re-added placeholder players
+// on the next restart/redeploy. Keeping the table empty is now respected.
+const SEED_DEMO_PLAYERS = process.env.SEED_DEMO_PLAYERS === 'true';
+if (SEED_DEMO_PLAYERS && !db.prepare('SELECT COUNT(*) as c FROM players').get().c) {
   const insP = db.prepare('INSERT INTO players (name,org,elo,wins,losses) VALUES (?,?,?,?,?)');
   [
     {name:'ShadowX',    org:'VVS', elo:2780, wins:38, losses:12},
