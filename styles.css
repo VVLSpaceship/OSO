@@ -849,6 +849,19 @@ body::after {
 }
 .admin-cancel-btn:hover { border-color: rgba(91,173,255,0.5); color: var(--blue); }
 
+/* Stats form rows */
+.stats-form-header { display:grid; grid-template-columns:2fr 1fr 1fr 2fr auto; gap:.3rem; margin-bottom:.3rem; padding:0 .1rem; }
+.stats-form-header span { font-size:.6rem; color:var(--yellow); letter-spacing:.12em; text-transform:uppercase; }
+.stats-form-row { display:grid; grid-template-columns:2fr 1fr 1fr 2fr auto; gap:.3rem; margin-bottom:.3rem; align-items:center; }
+.stats-inp { padding:.3rem .45rem !important; font-size:.8rem !important; }
+/* Stats display in log table */
+.stats-toggle { font-size:.62rem !important; padding:.15rem .4rem !important; letter-spacing:.05em; }
+.log-stats-row td { padding:.5rem 1rem !important; background:rgba(91,173,255,0.03); }
+.log-stats-table { font-size:.8rem; }
+.log-stats-head { display:grid; grid-template-columns:2fr 1fr 1fr 3fr; gap:.5rem; padding:.25rem .3rem; margin-bottom:.2rem; border-bottom:1px solid rgba(91,173,255,0.12); }
+.log-stats-head span { font-size:.6rem; color:var(--yellow); letter-spacing:.12em; text-transform:uppercase; }
+.log-stats-data-row { display:grid; grid-template-columns:2fr 1fr 1fr 3fr; gap:.5rem; padding:.2rem .3rem; border-bottom:1px solid rgba(91,173,255,0.05); }
+
 .login-error {
   font-size: 0.82rem;
   font-weight: 600;

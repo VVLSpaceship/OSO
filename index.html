@@ -411,12 +411,30 @@
             <select id="auf_perms_sel" class="admin-select" onchange="addPermTag(this.value);this.value='';" style="width:auto;min-width:180px;">
               <option value="">— Add permission —</option>
               <option value="all">ALL ACCESS</option>
-              <option value="logs">LOGS</option>
-              <option value="wager">WAGER</option>
-              <option value="awards">AWARDS</option>
-              <option value="brackets">BRACKETS</option>
-              <option value="orgs">ORGS</option>
-              <option value="schedule">SCHEDULE</option>
+              <optgroup label="─── LOGS ───">
+                <option value="logs">LOGS (create/edit)</option>
+                <option value="logs_delete">LOGS + DELETE</option>
+              </optgroup>
+              <optgroup label="─── WAGER ───">
+                <option value="wager">WAGER (create/edit)</option>
+                <option value="wager_delete">WAGER + DELETE</option>
+              </optgroup>
+              <optgroup label="─── AWARDS ───">
+                <option value="awards">AWARDS (create/edit)</option>
+                <option value="awards_delete">AWARDS + DELETE</option>
+              </optgroup>
+              <optgroup label="─── BRACKETS ───">
+                <option value="brackets">BRACKETS (create/edit)</option>
+                <option value="brackets_delete">BRACKETS + DELETE</option>
+              </optgroup>
+              <optgroup label="─── ORGS ───">
+                <option value="orgs">ORGS (create/edit)</option>
+                <option value="orgs_delete">ORGS + DELETE</option>
+              </optgroup>
+              <optgroup label="─── SCHEDULE ───">
+                <option value="schedule">SCHEDULE (create/edit)</option>
+                <option value="schedule_delete">SCHEDULE + DELETE</option>
+              </optgroup>
             </select>
           </div>
           <div class="admin-field" style="display:flex;align-items:center;gap:.5rem;padding-top:.4rem;">
