@@ -1,0 +1,75 @@
+import { Client, EmbedBuilder } from 'discord.js';
+export type GuildRoleType = 'CO_LEADER' | 'MANAGER' | 'MAIN' | 'SUB';
+export type WagerType = '1V1' | '2V2';
+export declare function setupDatabase(db: any): void;
+export declare function getSetting(db: any, key: string): string;
+export declare function setSetting(db: any, key: string, value: string): void;
+export declare function getSigningRequest(db: any, id: number): any | null;
+export declare function createSigningRequest(db: any, data: {
+    org_tag: string;
+    org_id: number;
+    inviter_discord_id: string;
+    target_discord_id: string;
+    target_name: string;
+    role: string;
+}): number;
+export declare function updateSigningStatus(db: any, id: number, status: string, logMessageId?: string): void;
+export declare function getCooldown(db: any, discordId: string): Date | null;
+export declare function setCooldown(db: any, discordId: string): void;
+export declare function clearCooldown(db: any, discordId: string): void;
+export declare function getRoleLabel(roleType: GuildRoleType): string;
+export declare function getRoleLimit(roleType: GuildRoleType): number;
+export declare function getGuildByLeaderId(db: any, leaderId: string): any | null;
+export declare function getGuildById(db: any, guildId: string): any | null;
+export declare function getRoleMemberCount(db: any, guildId: string, roleType: GuildRoleType): number;
+export declare function isUserInRole(db: any, guildId: string, userId: string, roleType: GuildRoleType): boolean;
+export declare function canAddUserToRole(db: any, guildId: string, roleType: GuildRoleType): boolean;
+export declare function addMemberToRole(db: any, guildId: string, userId: string, roleType: GuildRoleType): boolean;
+export declare function removeMemberFromRole(db: any, guildId: string, userId: string, roleType: GuildRoleType): boolean;
+export declare function getMembersByRole(db: any, guildId: string, roleType: GuildRoleType): string[];
+export declare function createInvite(db: any, guildId: string, targetUserId: string, roleType: GuildRoleType, inviterId: string, expiresAt: string): number;
+export declare function getInviteById(db: any, inviteId: number): any | null;
+export declare function getPendingInviteForTarget(db: any, guildId: string, targetUserId: string, roleType: GuildRoleType): any | null;
+export declare function setInviteStatus(db: any, inviteId: number, status: 'ACCEPTED' | 'DECLINED'): void;
+export declare function validateInviteForAction(db: any, inviteId: number): {
+    invite: any | null;
+    reason?: string;
+};
+export declare function formatGuildPanelDescription(db: any, guildId: string): string;
+export declare function buildGuildPanelEmbed(db: any, guildId: string, thumbnailUrl?: string | null): EmbedBuilder;
+export declare function refreshGuildPanel(client: Client, db: any, guildId: string): Promise<boolean>;
+export declare function createWar(db: any, openerGuildId: string, opponentGuildId: string, channelId: string, createdByUserId: string, panelMessageId: string): number;
+export declare function createWager(db: any, type: WagerType, channelId: string, challenger1Id: string, challenger2Id: string | null, challenged1Id: string, challenged2Id: string | null, panelMessageId: string): number;
+export declare function getWagerById(db: any, wagerId: number): any | null;
+export declare function getWagerByChannelId(db: any, channelId: string): any | null;
+export declare function recordWagerAcceptance(db: any, wagerId: number, userId: string): string[];
+export declare function markWagerAccepted(db: any, wagerId: number): void;
+export declare function dodgeWager(db: any, wagerId: number, dodgedByUserId: string): void;
+export declare function closeWager(db: any, wagerId: number): void;
+export declare function getWarById(db: any, warId: number): any | null;
+export declare function getWarByChannelId(db: any, channelId: string): any | null;
+export declare function acceptWar(db: any, warId: number, acceptedByUserId: string, acceptedByGuildId: string): void;
+export declare function finishWar(db: any, warId: number, resultGuildId: string, winnerScore: number, loserScore: number, clipsLink?: string | null): void;
+export declare function dodgeWar(db: any, warId: number): void;
+export declare function addGuildWin(db: any, guildId: string): void;
+export declare function addGuildLoss(db: any, guildId: string): void;
+export declare function applyGuildElo(db: any, winnerGuildId: string, winnerGain: number, loserGuildId: string, loserLoss: number, warId?: number): void;
+export declare function getPlayerElo(db: any, userId: string): number;
+export declare function applyPlayerElo(db: any, winnerIds: string[], winnerGain: number, loserIds: string[], loserLoss: number, wagerId?: number): void;
+export declare function renderGuildPanel(db: any, guildId: string): {
+    guild: any;
+    managers: any;
+    mainRosters: any;
+    subRosters: any;
+} | null;
+export declare function checkExpiredTickets(db: any): {
+    wars: any[];
+    wagers: any[];
+};
+export declare function autoDodgeWar(db: any, warId: number): void;
+export declare function autoDodgeWager(db: any, wagerId: number): void;
+export declare function getPendingTicketsForReminder(db: any): {
+    wars: any[];
+    wagers: any[];
+};
+//# sourceMappingURL=database.d.ts.map
