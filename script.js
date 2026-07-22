@@ -42,9 +42,9 @@ const DEFAULT_ELO_INFO = {
   ],
   gains: [
     {case:'Win vs higher ranked', value:'+32'},
-    {case:'Win vs equal',         value:'+25'},
+    {case:'Win vs equal',         value:'+20'},
     {case:'Win vs lower ranked',  value:'+16'},
-    {case:'Loss',                 value:'−20'},
+    {case:'Loss',                 value:'−25'},
   ],
 };
 
@@ -84,6 +84,9 @@ let seasonFilter = 'ALL';
 let wagerStatus  = 'ALL';
 let awardsSeasonSel = null;
 let _logStats    = [];
+let _statsSettings = { elo_per_kill: 2.5, elo_per_death: -2.5 };
+let _logOrg1 = '', _logOrg2 = '';
+let _logDraft = null, _logDraftKey = null;
 
 // Dynamic data from API
 let orgsData      = [];
@@ -105,7 +108,24 @@ async function api(method, path, body) {
   if (adminToken) opts.headers['Authorization'] = 'Bearer ' + adminToken;
   if (body !== undefined) opts.body = JSON.stringify(body);
   const res = await fetch('/api' + path, opts);
+  if (res.status === 401) {
+    adminToken = null;
+    isAdmin = false;
+    try { sessionStorage.removeItem('vvl_token'); } catch(_) {}
+    setAdminUI(false);
+    showSessionExpiredBanner();
+    throw new Error('session_expired');
+  }
   return res.json();
+}
+function showSessionExpiredBanner() {
+  if (document.getElementById('_sessionExpiredBanner')) return;
+  const el = document.createElement('div');
+  el.id = '_sessionExpiredBanner';
+  el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#c0392b;color:#fff;text-align:center;padding:.7rem 1rem;font-size:.9rem;font-weight:600;letter-spacing:.05em;cursor:pointer;';
+  el.textContent = '⚠ Session expired — please log in again. (click to dismiss)';
+  el.onclick = () => el.remove();
+  document.body.prepend(el);
 }
 const apiGet    = (path)       => api('GET',    path);
 const apiPost   = (path, body) => api('POST',   path, body);
@@ -259,7 +279,6 @@ function renderOrgList() {
 function openOrgModal(id) {
   const o = orgsData.find(x => x.id === id); if (!o) return;
   const wr = o.wins+o.losses > 0 ? ((o.wins/(o.wins+o.losses))*100).toFixed(0)+'%' : '—';
-  const wagerStr = o.wager ? '$'+Number(o.wager).toLocaleString() : '—';
   document.getElementById('modalContent').innerHTML = `
     <div class="modal-org-header">
       ${o.logo_url ? `<img src="${o.logo_url}" alt="${o.tag}" style="width:52px;height:52px;object-fit:contain;border-radius:6px;flex-shrink:0;">` : `<div class="modal-org-avatar">${o.tag.slice(0,2)}</div>`}
@@ -271,7 +290,6 @@ function openOrgModal(id) {
       <div class="modal-stat"><div class="modal-stat-label">Winrate</div><div class="modal-stat-value">${wr}</div></div>
       <div class="modal-stat"><div class="modal-stat-label">Events Won</div><div class="modal-stat-value" style="color:var(--yellow)">${o.wonEvents}</div></div>
       <div class="modal-stat"><div class="modal-stat-label">Members</div><div class="modal-stat-value">${o.members.length}</div></div>
-      <div class="modal-stat"><div class="modal-stat-label">Wager</div><div class="modal-stat-value wager-cell">${wagerStr}</div></div>
     </div>
     <div class="modal-stat" style="margin-bottom:.8rem;"><div class="modal-stat-label">MVP Player</div><div class="modal-stat-value" style="color:var(--yellow);">⭐ ${o.mvp||'—'}</div></div>
     <div class="modal-section-title">ROSTER</div>
@@ -296,13 +314,11 @@ function renderStats() {
     wins:    (a,b) => (b.wins-b.losses)-(a.wins-a.losses),
     events:  (a,b) => b.wonEvents-a.wonEvents,
     members: (a,b) => b.members.length-a.members.length,
-    wager:   (a,b) => (parseFloat(b.wager)||0)-(parseFloat(a.wager)||0),
   };
   const sorted = [...orgsData].sort(sortMap[statsSort]||sortMap.wins);
   document.getElementById('statsBody').innerHTML = sorted.map((o,i) => {
     const r=i+1, rc=r<=3?`rank-${r}`:'', rm=r<=3?['①','②','③'][r-1]:r;
-    const wagerStr = o.wager ? '$'+Number(o.wager).toLocaleString() : '—';
-    return `<tr class="${rc}"><td class="rank-cell">${rm}</td><td class="org-name-cell">${o.name}</td><td><span class="stat-wins">${o.wins}W</span>&nbsp;<span style="opacity:.4">/</span>&nbsp;<span class="stat-losses">${o.losses}L</span></td><td style="color:var(--yellow)">${o.wonEvents}</td><td>${o.members.length}</td><td class="mvp-cell">${o.mvp||'—'}</td><td class="wager-cell">${wagerStr}</td></tr>`;
+    return `<tr class="${rc}"><td class="rank-cell">${rm}</td><td class="org-name-cell">${o.name}</td><td><span class="stat-wins">${o.wins}W</span>&nbsp;<span style="opacity:.4">/</span>&nbsp;<span class="stat-losses">${o.losses}L</span></td><td style="color:var(--yellow)">${o.wonEvents}</td><td>${o.members.length}</td><td class="mvp-cell">${o.mvp||'—'}</td></tr>`;
   }).join('');
 }
 
@@ -318,7 +334,7 @@ function renderGuilds() {
   document.getElementById('guildGrid').innerHTML = (guildsData[currentGuildR]||[]).map(g => `
     <div class="guild-card">
       <div class="guild-rank">RANK #${g.rank}</div>
-      <div class="guild-icon">${g.logo_url ? `<img src="${g.logo_url}" alt="${g.tag}" style="width:100%;height:100%;object-fit:contain;border-radius:50%;padding:4px;">` : g.icon}</div>
+      <div class="guild-icon">${g.logo_url ? '<img src="'+g.logo_url+'" alt="'+g.tag+'" style="width:100%;height:100%;object-fit:contain;border-radius:50%;padding:4px;">' : g.icon}</div>
       <div class="guild-name">${g.name}</div>
       <div class="guild-tag">[${g.tag}]</div>
       <div class="guild-stats">
@@ -338,7 +354,7 @@ function renderTeams() {
   document.getElementById('teamGrid').innerHTML = (teamsData[currentTeamR]||[]).map(t => `
     <div class="team-card">
       <div class="team-card-header">
-        <div class="team-icon">${t.logo_url ? `<img src="${t.logo_url}" alt="${t.tag}" style="width:100%;height:100%;object-fit:contain;border-radius:6px;padding:3px;">` : t.icon}</div>
+        <div class="team-icon">${t.logo_url ? '<img src="'+t.logo_url+'" alt="'+t.tag+'" style="width:100%;height:100%;object-fit:contain;border-radius:6px;padding:3px;">' : t.icon}</div>
         <div><div class="team-name">${t.name}</div><div class="team-region">[${t.tag}] · ${t.region}</div></div>
       </div>
       <div class="team-row"><span>Rank</span><span>${t.rank}</span></div>
@@ -619,6 +635,7 @@ async function loadEloInfo() {
     eloInfoData = data.content ? JSON.parse(data.content) : DEFAULT_ELO_INFO;
   } catch(e) { eloInfoData = DEFAULT_ELO_INFO; }
   renderEloInfo();
+  renderLeaderboard();
 }
 
 function renderEloInfo() {
@@ -679,7 +696,7 @@ function openEloInfoEditor() {
       ${info.gains.map((gn,i)=>`
         <div style="display:grid;grid-template-columns:1fr 6rem auto;gap:.4rem;margin-bottom:.3rem;">
           <input class="admin-input" id="ei_gain_case_${i}" value="${gn.case}" placeholder="Descrição">
-          <input class="admin-input" id="ei_gain_val_${i}" value="${gn.value}" placeholder="+25">
+          <input class="admin-input" id="ei_gain_val_${i}" value="${gn.value}" placeholder="+20">
           <button class="tbl-btn del" onclick="removeEloGain(${i})">✕</button>
         </div>`).join('')}
     </div>
@@ -702,6 +719,7 @@ async function saveEloInfo() {
   eloInfoData = info;
   closeLogForm();
   renderEloInfo();
+  renderLeaderboard();
 }
 
 // ============================================================
@@ -735,11 +753,15 @@ async function loadLeaderboard() {
 }
 
 function getEloTier(elo) {
-  if (elo>=2500) return {label:'DIAMOND', cls:'tier-diamond'};
-  if (elo>=2000) return {label:'PLATINUM',cls:'tier-platinum'};
-  if (elo>=1500) return {label:'GOLD',    cls:'tier-gold'};
-  if (elo>=1000) return {label:'SILVER',  cls:'tier-silver'};
-  return               {label:'BRONZE',  cls:'tier-bronze'};
+  const info = eloInfoData || DEFAULT_ELO_INFO;
+  const tiers = (info.tiers || []).map(t => {
+    const m = t.range.match(/\d+/);
+    return { label: t.name, color: t.color, min: m ? parseInt(m[0]) : 0 };
+  }).sort((a, b) => b.min - a.min);
+  for (const t of tiers) {
+    if (elo >= t.min) return t;
+  }
+  return tiers.length ? tiers[tiers.length - 1] : { label: 'UNRANKED', color: '#888', min: 0 };
 }
 
 function renderLeaderboard() {
@@ -752,7 +774,7 @@ function renderLeaderboard() {
     const _pEdit = hasPerm('orgs') ? `<button class="tbl-btn" onclick="openPlayerForm(${JSON.stringify(p).replace(/"/g,'&quot;')})">✎</button>` : '';
     const _pDel  = hasPerm('orgs_delete') ? `<button class="tbl-btn del" onclick="confirmDelete('player',${p.id})">✕</button>` : '';
     const adminBtns = (_pEdit||_pDel) ? `<td>${_pEdit}${_pDel}</td>` : '';
-    return `<tr class="${rc}"><td class="lb-rank">${rd}</td><td style="font-weight:600">${p.name}</td><td style="color:rgba(160,200,255,.5);font-size:.85rem;">[${p.org}]</td><td class="lb-elo">${p.elo}</td><td><span class="tier-badge ${t.cls}">${t.label}</span></td><td style="font-size:.85rem;"><span class="stat-wins">${p.wins}W</span>&nbsp;<span style="opacity:.4">/</span>&nbsp;<span class="stat-losses">${p.losses}L</span></td>${adminBtns}</tr>`;
+    return `<tr class="${rc}"><td class="lb-rank">${rd}</td><td style="font-weight:600">${p.name}</td><td style="color:rgba(160,200,255,.5);font-size:.85rem;">[${p.org}]</td><td class="lb-elo">${p.elo}</td><td><span class="tier-badge tier-${t.label.toLowerCase()}" style="color:${t.color}">${t.label}</span></td><td style="font-size:.85rem;"><span class="stat-wins">${p.wins}W</span>&nbsp;<span style="opacity:.4">/</span>&nbsp;<span class="stat-losses">${p.losses}L</span></td>${adminBtns}</tr>`;
   }).join('');
 }
 
@@ -819,8 +841,8 @@ function refreshAdminButtons() {
     addWarLogBtn: 'logs', addSeasonLogBtn: 'logs',
     addWagerBtn: 'wager',
     addAwardBtn: 'awards',
-    editHomeRulesBtn: 'all', editLogsRulesBtn: 'all', editEloInfoBtn: 'all',
-    addOrgBtn: 'orgs', addPlayerBtn: 'orgs',
+    editHomeRulesBtn: 'all', editLogsRulesBtn: 'all', editEloInfoBtn: 'all', eloStatsSettingsBtn: 'all',
+    addOrgBtn: 'orgs', addPlayerBtn: 'orgs', adjustEloBtn: 'orgs',
     addScheduleBtn: 'schedule',
     newBracketBtn: 'brackets',
   };
@@ -953,13 +975,12 @@ async function loadWarLogs() {
     const eloHtml = (r.elo_org1 == null && r.elo_org2 == null) ? '—' :
       `<span class="${r.elo_org1>0?'stat-wins':r.elo_org1<0?'stat-losses':''}">${r.elo_org1!=null?(r.elo_org1>0?'+':'')+r.elo_org1:'—'}</span>&nbsp;/&nbsp;<span class="${r.elo_org2>0?'stat-wins':r.elo_org2<0?'stat-losses':''}">${r.elo_org2!=null?(r.elo_org2>0?'+':'')+r.elo_org2:'—'}</span>`;
     const statsBtn = stats.length ? `<button class="tbl-btn stats-toggle" onclick="toggleLogStats(this)">▼ STATS</button>` : '';
-    const statsSubrow = stats.length ? `<tr class="log-stats-row" style="display:none;"><td colspan="15">${buildStatsSubrow(stats)}</td></tr>` : '';
+    const statsSubrow = stats.length ? `<tr class="log-stats-row" style="display:none;"><td colspan="15">${buildStatsSubrow(stats, r.org1, r.org2, r.elo_org1, r.elo_org2, r.mvp)}</td></tr>` : '';
     return `<tr>
       <td>${r.date}</td>
       <td style="color:var(--blue);font-weight:600;">${r.org1} vs ${r.org2}</td>
       <td><span class="stat-wins">${r.score1}</span>&nbsp;—&nbsp;<span class="stat-losses">${r.score2}</span></td>
       <td style="color:var(--yellow);font-weight:600;">${r.winner||'—'}</td>
-      <td class="wager-cell">${r.wager?(isNaN(r.wager)?r.wager:'$'+Number(r.wager).toLocaleString()):'—'}</td>
       <td style="font-size:.85rem;white-space:nowrap;">${eloHtml}</td>
       <td><span class="org-badge badge-active" style="font-size:.62rem;">${r.region}</span></td>
       <td style="color:rgba(160,200,255,.5)">${r.season}</td>
@@ -1007,7 +1028,7 @@ async function loadSeasonLogs() {
     const _sDel   = hasPerm('logs_delete') ? `<button class="tbl-btn del" onclick="confirmDelete('season',${r.id})">✕</button>` : '';
     const actBtns = (_sEdit||_sDel) ? `<td>${_sEdit}${_sDel}</td>` : '';
     const statsBtn = stats.length ? `<button class="tbl-btn stats-toggle" onclick="toggleLogStats(this)">▼ STATS</button>` : '';
-    const statsSubrow = stats.length ? `<tr class="log-stats-row" style="display:none;"><td colspan="15">${buildStatsSubrow(stats)}</td></tr>` : '';
+    const statsSubrow = stats.length ? `<tr class="log-stats-row" style="display:none;"><td colspan="15">${buildStatsSubrow(stats, r.org1, r.org2, null, null, r.mvp)}</td></tr>` : '';
     return `<tr>
       <td>${r.date}</td>
       <td style="color:rgba(160,200,255,.6);font-size:.85rem;">${r.event_name||'—'}</td>
@@ -1049,7 +1070,7 @@ async function loadWagerRecords() {
     const _wDel   = hasPerm('wager_delete') ? `<button class="tbl-btn del" onclick="confirmDelete('wager',${r.id})">✕</button>` : '';
     const actBtns = (_wEdit||_wDel) ? `<td>${_wEdit}${_wDel}</td>` : '';
     const statsBtn = stats.length ? `<button class="tbl-btn stats-toggle" onclick="toggleLogStats(this)">▼ STATS</button>` : '';
-    const statsSubrow = stats.length ? `<tr class="log-stats-row" style="display:none;"><td colspan="15">${buildStatsSubrow(stats)}</td></tr>` : '';
+    const statsSubrow = stats.length ? `<tr class="log-stats-row" style="display:none;"><td colspan="15">${buildStatsSubrow(stats, r.challenger, r.challenged)}</td></tr>` : '';
     return `<tr>
       <td>${r.date}</td>
       <td style="color:var(--blue);font-weight:600;">${r.challenger}</td>
@@ -1071,8 +1092,30 @@ async function loadWagerRecords() {
 // LOG FORM (Admin — War / Season / Wager)
 // ============================================================
 function openLogForm(type, existing) {
-  const e = existing || {};
-  _logStats = Array.isArray(e.stats) ? e.stats.map(s => ({...s})) : [];
+  const draftKey = type + '-' + (existing?.id ?? 'new');
+  let e = existing || {};
+  if (_logDraftKey === draftKey && _logDraft) {
+    e = { ...e, ..._logDraft.fields };
+    _logStats = _logDraft.stats.map(s => ({...s}));
+  } else {
+    _logDraftKey = draftKey;
+    try {
+      const saved = localStorage.getItem('vvl_draft_' + draftKey);
+      if (saved && !existing) {
+        _logDraft = JSON.parse(saved);
+        e = { ...e, ..._logDraft.fields };
+        _logStats = _logDraft.stats.map(s => ({...s}));
+      } else {
+        _logDraft = null;
+        _logStats = Array.isArray(e.stats) ? e.stats.map(s => ({...s})) : [];
+      }
+    } catch(_) {
+      _logDraft = null;
+      _logStats = Array.isArray(e.stats) ? e.stats.map(s => ({...s})) : [];
+    }
+  }
+  _logOrg1 = e.org1 || e.challenger || '';
+  _logOrg2 = e.org2 || e.challenged || '';
   const isEdit = !!e.id;
   const title = { war:'WAR LOG', season:'SEASON LOG', wager:'WAGER RECORD' }[type];
   let formHtml = '';
@@ -1090,12 +1133,12 @@ function openLogForm(type, existing) {
       <div class="admin-form-grid-2">
         <div class="admin-field"><label class="admin-label">DATE</label><input id="lf_date" type="date" class="admin-input" value="${e.date||''}"></div>
         <div class="admin-field"><label class="admin-label">WINNER</label>${winSel(e.winner||'')}</div>
-        <div class="admin-field"><label class="admin-label">WAGER</label><input id="lf_wager" class="admin-input" value="${e.wager||''}" placeholder="ex: $500, items, custom..."></div>
         <div class="admin-field"><label class="admin-label">REGION</label><select id="lf_region" class="admin-select"><option ${e.region==='NA'?'selected':''}>NA</option><option ${e.region==='EU'?'selected':''}>EU</option><option ${e.region==='ASIA'?'selected':''}>ASIA</option><option ${e.region==='OCE'?'selected':''}>OCE</option><option ${e.region==='SA'?'selected':''}>SA</option></select></div>
-        <div class="admin-field"><label class="admin-label">ELO ORG 1 (ex: +25 or -20)</label><input id="lf_elo1" type="number" class="admin-input" value="${e.elo_org1??''}" placeholder="optional"></div>
-        <div class="admin-field"><label class="admin-label">ELO ORG 2 (ex: +25 or -20)</label><input id="lf_elo2" type="number" class="admin-input" value="${e.elo_org2??''}" placeholder="optional"></div>
+        <div class="admin-field"><label class="admin-label">ELO ORG 1 (ex: +20 or -25)</label><input id="lf_elo1" type="number" class="admin-input" value="${e.elo_org1??''}" placeholder="optional" oninput="renderLogStatsTable()"></div>
+        <div class="admin-field"><label class="admin-label">ELO ORG 2 (ex: +20 or -25)</label><input id="lf_elo2" type="number" class="admin-input" value="${e.elo_org2??''}" placeholder="optional" oninput="renderLogStatsTable()"></div>
         <div class="admin-field"><label class="admin-label">SEASON</label><input id="lf_season" class="admin-input" value="${e.season||'S3'}" placeholder="S1, S2, S3..."></div>
         <div class="admin-field"><label class="admin-label">NOTES</label><input id="lf_notes" class="admin-input" value="${e.notes||''}"></div>
+        <div class="admin-field"><label class="admin-label">MVP</label><input id="lf_mvp" class="admin-input" value="${(e.mvp||'').replace(/"/g,'&quot;')}" placeholder="Player name (optional)"></div>
       </div>`;
   } else if (type === 'season') {
     const orgSel = (id, val) => `<select id="${id}" class="admin-select">${orgsData.map(o=>`<option value="${o.tag}" ${val===o.tag?'selected':''}>${o.tag} — ${o.name}</option>`).join('')}</select>`;
@@ -1116,9 +1159,9 @@ function openLogForm(type, existing) {
         <div class="admin-field"><label class="admin-label">POINTS LOSER</label><input id="lf_pts_l" type="number" class="admin-input" value="${e.points_loser??0}" placeholder="ex: -100"></div>
         <div class="admin-field"><label class="admin-label">SEASON</label><input id="lf_season" class="admin-input" value="${e.season||'S3'}"></div>
         <div class="admin-field"><label class="admin-label">NOTES</label><input id="lf_notes" class="admin-input" value="${e.notes||''}"></div>
+        <div class="admin-field"><label class="admin-label">MVP</label><input id="lf_mvp" class="admin-input" value="${(e.mvp||'').replace(/"/g,'&quot;')}" placeholder="Player name (optional)"></div>
       </div>`;
   } else {
-    const winOptW = `<option value="">— NONE —</option>${orgsData.map(o=>`<option value="${o.tag}" ${e.winner===o.tag?'selected':''}>${o.tag} — ${o.name}</option>`).join('')}`;
     formHtml = `
       <div class="admin-form-grid-2">
         <div class="admin-field"><label class="admin-label">DATE</label><input id="lf_date" type="date" class="admin-input" value="${e.date||''}"></div>
@@ -1126,7 +1169,7 @@ function openLogForm(type, existing) {
         <div class="admin-field"><label class="admin-label">CHALLENGER</label><input id="lf_challenger" class="admin-input" value="${(e.challenger||'').replace(/"/g,'&quot;')}" placeholder="Player or org name"></div>
         <div class="admin-field"><label class="admin-label">CHALLENGED</label><input id="lf_challenged" class="admin-input" value="${(e.challenged||'').replace(/"/g,'&quot;')}" placeholder="Player or org name"></div>
         <div class="admin-field"><label class="admin-label">AMOUNT</label><input id="lf_amount" class="admin-input" value="${e.amount||''}" placeholder="ex: $500, items, custom..."></div>
-        <div class="admin-field"><label class="admin-label">WINNER</label><select id="lf_winner" class="admin-select">${winOptW}</select></div>
+        <div class="admin-field"><label class="admin-label">WINNER</label><input id="lf_winner" class="admin-input" value="${(e.winner||'').replace(/"/g,'&quot;')}" placeholder="Player or org name"></div>
         <div class="admin-field"><label class="admin-label">STATUS</label><select id="lf_status" class="admin-select"><option value="pending" ${e.status==='pending'||!e.status?'selected':''}>PENDING</option><option value="settled" ${e.status==='settled'?'selected':''}>SETTLED</option><option value="cancelled" ${e.status==='cancelled'?'selected':''}>CANCELLED</option></select></div>
         <div class="admin-field"><label class="admin-label">NOTES</label><input id="lf_notes" class="admin-input" value="${e.notes||''}"></div>
       </div>
@@ -1137,7 +1180,10 @@ function openLogForm(type, existing) {
     <div style="margin-top:1rem;border-top:1px solid rgba(91,173,255,0.12);padding-top:.8rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
         <label class="admin-label" style="margin:0;">MATCH STATS</label>
-        <button class="tbl-btn" onclick="addStatRow()" style="font-size:.7rem;padding:.2rem .6rem;">+ ADD PLAYER</button>
+        <div style="display:flex;gap:.3rem;">
+          <button class="tbl-btn" onclick="addStatRow(1)" style="font-size:.7rem;padding:.2rem .6rem;">+ ORG 1</button>
+          <button class="tbl-btn" onclick="addStatRow(2)" style="font-size:.7rem;padding:.2rem .6rem;">+ ORG 2</button>
+        </div>
       </div>
       <div id="lf_stats_wrap"></div>
     </div>`;
@@ -1160,15 +1206,34 @@ async function saveLogForm(type, id) {
   let body = {};
   if (type === 'war') {
     const elo1raw = g('lf_elo1'), elo2raw = g('lf_elo2');
-    body = { date:g('lf_date'), org1:g('lf_org1'), org2:g('lf_org2'), score1:parseInt(g('lf_s1'))||0, score2:parseInt(g('lf_s2'))||0, winner:g('lf_winner'), wager:g('lf_wager'), region:g('lf_region'), season:g('lf_season'), notes:g('lf_notes'), elo_org1:elo1raw!==''?parseInt(elo1raw):null, elo_org2:elo2raw!==''?parseInt(elo2raw):null };
+    body = { date:g('lf_date'), org1:g('lf_org1'), org2:g('lf_org2'), score1:parseInt(g('lf_s1'))||0, score2:parseInt(g('lf_s2'))||0, winner:g('lf_winner'), region:g('lf_region'), season:g('lf_season'), notes:g('lf_notes'), elo_org1:elo1raw!==''?parseInt(elo1raw):null, elo_org2:elo2raw!==''?parseInt(elo2raw):null, mvp:g('lf_mvp') };
   } else if (type === 'season') {
-    body = { season:g('lf_season'), date:g('lf_date'), event_name:g('lf_event')||'', org1:g('lf_org1'), org2:g('lf_org2'), score1:parseInt(g('lf_s1'))||0, score2:parseInt(g('lf_s2'))||0, winner:g('lf_winner'), region:g('lf_region'), notes:g('lf_notes'), points_winner:parseInt(g('lf_pts_w'))||0, points_loser:parseInt(g('lf_pts_l'))||0 };
+    body = { season:g('lf_season'), date:g('lf_date'), event_name:g('lf_event')||'', org1:g('lf_org1'), org2:g('lf_org2'), score1:parseInt(g('lf_s1'))||0, score2:parseInt(g('lf_s2'))||0, winner:g('lf_winner'), region:g('lf_region'), notes:g('lf_notes'), points_winner:parseInt(g('lf_pts_w'))||0, points_loser:parseInt(g('lf_pts_l'))||0, mvp:g('lf_mvp') };
   } else {
     body = { date:g('lf_date'), challenger:g('lf_challenger'), challenged:g('lf_challenged'), amount:g('lf_amount'), winner:g('lf_winner'), status:g('lf_status'), paid:document.getElementById('lf_paid').checked, season:g('lf_season'), notes:g('lf_notes') };
   }
   body.stats = _logStats.filter(s => s.player && s.player.trim());
   const path = '/logs/'+type;
-  id ? await apiPut(path+'/'+id, body) : await apiPost(path, body);
+  try {
+    id ? await apiPut(path+'/'+id, body) : await apiPost(path, body);
+  } catch(err) {
+    if (err.message === 'session_expired') {
+      const actions = document.querySelector('#logFormContent .admin-modal-actions');
+      if (actions && !document.getElementById('_lf_exp_msg')) {
+        const msg = document.createElement('div');
+        msg.id = '_lf_exp_msg';
+        msg.style.cssText = 'color:#f87171;font-size:.82rem;font-weight:600;text-align:center;padding:.4rem 0 .1rem;letter-spacing:.06em;';
+        msg.textContent = '⚠ Login expirado — faça login novamente.';
+        actions.before(msg);
+      }
+      return;
+    }
+    throw err;
+  }
+  const savedDraftKey = _logDraftKey;
+  _logDraft = null;
+  _logDraftKey = null;
+  try { if (savedDraftKey) localStorage.removeItem('vvl_draft_' + savedDraftKey); } catch(_) {}
   closeLogForm();
   if (type==='war')    { loadWarLogs(); loadOrgs(); }
   if (type==='season') { loadSeasonLogs(); loadOrgs(); }
@@ -1176,32 +1241,76 @@ async function saveLogForm(type, id) {
 }
 
 function g(id) { const el=document.getElementById(id); return el?(el.value||''):''; }
-function closeLogForm()  { document.getElementById('logFormModal').classList.remove('open'); }
+function captureFormDraft() {
+  if (!_logDraftKey) return;
+  const fv = id => { const el = document.getElementById(id); return el ? el.value : undefined; };
+  const fields = {};
+  [['date','lf_date'],['org1','lf_org1'],['org2','lf_org2'],['score1','lf_s1'],['score2','lf_s2'],
+   ['winner','lf_winner'],['region','lf_region'],['elo_org1','lf_elo1'],
+   ['elo_org2','lf_elo2'],['season','lf_season'],['notes','lf_notes'],['mvp','lf_mvp'],['event_name','lf_event'],
+   ['points_winner','lf_pts_w'],['points_loser','lf_pts_l'],['challenger','lf_challenger'],
+   ['challenged','lf_challenged'],['amount','lf_amount'],['status','lf_status']].forEach(([k,id]) => {
+    const v = fv(id);
+    if (v !== undefined) fields[k] = v;
+  });
+  const paidEl = document.getElementById('lf_paid');
+  if (paidEl) fields.paid = paidEl.checked;
+  _logDraft = { fields, stats: _logStats.map(s => ({...s})) };
+  try { localStorage.setItem('vvl_draft_' + _logDraftKey, JSON.stringify(_logDraft)); } catch(_) {}
+}
+function closeLogForm()  {
+  captureFormDraft();
+  document.getElementById('logFormModal').classList.remove('open');
+}
 function maybeCloseLogModal(e) { if (e.target===document.getElementById('logFormModal')) closeLogForm(); }
 
 function renderLogStatsTable() {
   const wrap = document.getElementById('lf_stats_wrap');
   if (!wrap) return;
+  const org1El = document.getElementById('lf_org1');
+  const org2El = document.getElementById('lf_org2');
+  if (org1El) _logOrg1 = org1El.options[org1El.selectedIndex]?.text || org1El.value;
+  if (org2El) _logOrg2 = org2El.options[org2El.selectedIndex]?.text || org2El.value;
   if (!_logStats.length) {
     wrap.innerHTML = '<div style="color:rgba(160,200,255,0.3);font-size:.78rem;text-align:center;padding:.4rem 0;">No players added yet</div>';
     return;
   }
-  wrap.innerHTML = `
-    <div class="stats-form-header">
-      <span>PLAYER</span><span>K</span><span>D</span><span>NOTES</span><span></span>
-    </div>
-    ${_logStats.map((s,i) => `
+  const guildElo1 = parseFloat(document.getElementById('lf_elo1')?.value) || 0;
+  const guildElo2 = parseFloat(document.getElementById('lf_elo2')?.value) || 0;
+  const teamGroups = [[],[],[]]; // 0=unassigned, 1=team1, 2=team2
+  _logStats.forEach((s,i) => { const t = s.team || 0; teamGroups[t < 0 || t > 2 ? 0 : t].push({s,i}); });
+  const renderGroup = (label, items, teamIdx) => {
+    if (!items.length) return '';
+    const gElo = teamIdx === 1 ? guildElo1 : teamIdx === 2 ? guildElo2 : 0;
+    return `
+    <div class="stats-form-group-label">${label}</div>
+    ${items.map(({s,i}) => {
+      const kdElo = (s.kills != null || s.deaths != null) ? calcStatElo(s.kills, s.deaths) : null;
+      const elo   = kdElo != null ? Math.round((kdElo + gElo) * 10) / 10 : (gElo !== 0 ? gElo : null);
+      const eloDisplay = elo != null ? `<span class="stats-elo-preview ${elo>0?'stat-wins':elo<0?'stat-losses':''}">${elo>0?'+':''}${elo}</span>` : '<span class="stats-elo-preview" style="opacity:.3">—</span>';
+      return `
     <div class="stats-form-row">
       <input class="admin-input stats-inp" placeholder="Player" value="${(s.player||'').replace(/"/g,'&quot;')}" oninput="_logStats[${i}].player=this.value">
-      <input class="admin-input stats-inp" type="number" min="0" placeholder="K" value="${s.kills??''}" oninput="_logStats[${i}].kills=this.value===''?null:parseInt(this.value)">
-      <input class="admin-input stats-inp" type="number" min="0" placeholder="D" value="${s.deaths??''}" oninput="_logStats[${i}].deaths=this.value===''?null:parseInt(this.value)">
+      <input class="admin-input stats-inp" type="number" min="0" placeholder="K" value="${s.kills??''}" oninput="_logStats[${i}].kills=this.value===''?null:parseInt(this.value)" onchange="renderLogStatsTable()">
+      <input class="admin-input stats-inp" type="number" min="0" placeholder="D" value="${s.deaths??''}" oninput="_logStats[${i}].deaths=this.value===''?null:parseInt(this.value)" onchange="renderLogStatsTable()">
+      ${eloDisplay}
       <input class="admin-input stats-inp" placeholder="Notes" value="${(s.notes||'').replace(/"/g,'&quot;')}" oninput="_logStats[${i}].notes=this.value">
       <button class="tbl-btn del" onclick="removeStatRow(${i})">✕</button>
-    </div>`).join('')}`;
+    </div>`}).join('')}`;
+  };
+  const org1Label = _logOrg1 ? `ORG 1 — ${_logOrg1}` : 'ORG 1';
+  const org2Label = _logOrg2 ? `ORG 2 — ${_logOrg2}` : 'ORG 2';
+  wrap.innerHTML = `
+    <div class="stats-form-header">
+      <span>PLAYER</span><span>K</span><span>D</span><span>ELO</span><span>NOTES</span><span></span>
+    </div>
+    ${renderGroup(org1Label, teamGroups[1], 1)}
+    ${renderGroup(org2Label, teamGroups[2], 2)}
+    ${renderGroup('UNASSIGNED', teamGroups[0], 0)}`;
 }
 
-function addStatRow() {
-  _logStats.push({player:'', kills:null, deaths:null, notes:''});
+function addStatRow(team) {
+  _logStats.push({player:'', kills:null, deaths:null, notes:'', team: team || 0});
   renderLogStatsTable();
 }
 
@@ -1210,15 +1319,39 @@ function removeStatRow(idx) {
   renderLogStatsTable();
 }
 
-function buildStatsSubrow(stats) {
-  return `<div class="log-stats-table">
-    <div class="log-stats-head"><span>PLAYER</span><span>K</span><span>D</span><span>NOTES</span></div>
-    ${stats.map(s=>`<div class="log-stats-data-row">
-      <span>${s.player||'—'}</span>
+function buildStatsSubrow(stats, org1Name, org2Name, elo_org1, elo_org2, mvp) {
+  const mvpName = (mvp || '').trim().toLowerCase();
+  const team1 = stats.filter(s => s.team === 1);
+  const team2 = stats.filter(s => s.team === 2);
+  const unassigned = stats.filter(s => !s.team || (s.team !== 1 && s.team !== 2));
+  const renderRows = (items, guildElo) => items.map(s => {
+    const kdElo  = (s.kills != null || s.deaths != null) ? calcStatElo(s.kills, s.deaths) : null;
+    const g      = guildElo || 0;
+    const elo    = kdElo != null ? Math.round((kdElo + g) * 10) / 10 : (g !== 0 ? g : null);
+    const eloStr = elo != null ? (elo > 0 ? '+' : '') + elo : '—';
+    const eloClass = elo != null ? (elo > 0 ? 'stat-wins' : elo < 0 ? 'stat-losses' : '') : '';
+    const isMvp = mvpName && (s.player||'').trim().toLowerCase() === mvpName;
+    const playerHtml = isMvp
+      ? `<span style="color:#ffd700;font-weight:700;">👑 ${s.player||'—'}</span>`
+      : `<span>${s.player||'—'}</span>`;
+    return `<div class="log-stats-data-row">
+      ${playerHtml}
       <span class="stat-wins">${s.kills??'—'}</span>
       <span class="stat-losses">${s.deaths??'—'}</span>
+      <span class="${eloClass}">${eloStr}</span>
       <span style="opacity:.6">${s.notes||'—'}</span>
-    </div>`).join('')}
+    </div>`;
+  }).join('');
+  const renderGroup = (label, items, orgName, guildElo) => {
+    if (!items.length) return '';
+    const header = orgName ? `${label} — ${orgName}` : label;
+    return `<div class="log-stats-group-label">${header}</div>${renderRows(items, guildElo)}`;
+  };
+  return `<div class="log-stats-table">
+    <div class="log-stats-head"><span>PLAYER</span><span>K</span><span>D</span><span>ELO</span><span>NOTES</span></div>
+    ${team1.length || team2.length
+      ? renderGroup('ORG 1', team1, org1Name, parseInt(elo_org1)||0) + renderGroup('ORG 2', team2, org2Name, parseInt(elo_org2)||0) + (unassigned.length ? renderGroup('OTHER', unassigned) : '')
+      : renderRows(unassigned, 0)}
   </div>`;
 }
 
@@ -1249,6 +1382,7 @@ function openOrgForm(existing) {
     <div class="admin-form-grid-2" style="margin-bottom:.4rem;">
       <div class="admin-field"><input id="of_mem_name" class="admin-input" placeholder="Player name"></div>
       <div class="admin-field"><select id="of_mem_role" class="admin-select"><option>Player</option><option>Leader</option><option>Sub</option><option>Coach</option></select></div>
+      <div class="admin-field" style="grid-column:span 2;"><input id="of_mem_discord" class="admin-input" placeholder="Discord ID (optional, e.g. 123456789012345678)"></div>
     </div>
     <button class="admin-cancel-btn" style="margin-bottom:.8rem;width:100%;" onclick="addMember(${e.id})">+ ADD MEMBER</button>` : '';
 
@@ -1258,7 +1392,7 @@ function openOrgForm(existing) {
       <div class="admin-modal-title">${isEdit?'EDIT':'ADD'} ORG</div>
     </div>
     <div class="admin-form-grid-2">
-      <div class="admin-field"><label class="admin-label">TAG (ex: VVS)</label><input id="of_tag" class="admin-input" value="${e.tag||''}" maxlength="5" ${isEdit?'readonly style="opacity:.5"':''}></div>
+      <div class="admin-field"><label class="admin-label">TAG (ex: VVS)</label><input id="of_tag" class="admin-input" value="${e.tag||''}" maxlength="5"></div>
       <div class="admin-field"><label class="admin-label">NAME</label><input id="of_name" class="admin-input" value="${e.name||''}"></div>
       <div class="admin-field"><label class="admin-label">STATUS</label><select id="of_status" class="admin-select"><option value="active" ${e.status!=='inactive'?'selected':''}>ACTIVE</option><option value="inactive" ${e.status==='inactive'?'selected':''}>INACTIVE</option></select></div>
       <div class="admin-field"><label class="admin-label">REGION</label><select id="of_region" class="admin-select"><option ${!e.region||e.region==='NA'?'selected':''}>NA</option><option ${e.region==='EU'?'selected':''}>EU</option><option ${e.region==='ASIA'?'selected':''}>ASIA</option><option ${e.region==='OCE'?'selected':''}>OCE</option><option ${e.region==='SA'?'selected':''}>SA</option></select></div>
@@ -1287,7 +1421,8 @@ async function saveOrgForm(id) {
 async function addMember(orgId) {
   const name = g('of_mem_name').trim();
   if (!name) return;
-  await apiPost('/orgs/'+orgId+'/members', { name, role: g('of_mem_role') });
+  const discord_id = g('of_mem_discord').trim();
+  await apiPost('/orgs/'+orgId+'/members', { name, role: g('of_mem_role'), discord_id: discord_id || undefined });
   await loadOrgs();
   const fresh = orgsData.find(o => o.id === orgId);
   if (fresh) openOrgForm(fresh);
@@ -1331,6 +1466,56 @@ async function savePlayerForm(id) {
   closeLogForm();
   await loadLeaderboard();
 }
+
+// ============================================================
+// ELO ADJUST FORM (Admin)
+// ============================================================
+function openEloAdjustForm() {
+  const opts = leaderboardData.map(p => `<option value="${p.name.replace(/"/g,'&quot;')}">`).join('');
+  document.getElementById('logFormContent').innerHTML = `
+    <div class="admin-modal-header" style="margin-bottom:1rem;">
+      <div class="admin-modal-icon">⚡</div>
+      <div class="admin-modal-title">ADJUST PLAYER ELO</div>
+    </div>
+    <datalist id="ea_playerList">${opts}</datalist>
+    <div class="admin-form-grid-2">
+      <div class="admin-field"><label class="admin-label">PLAYER NAME</label><input id="ea_name" class="admin-input" list="ea_playerList" placeholder="Type player name..." autocomplete="off"></div>
+      <div class="admin-field"><label class="admin-label">ELO TO ADD (ex: 25 or -20)</label><input id="ea_delta" type="number" class="admin-input" placeholder="ex: 25"></div>
+      <div class="admin-field"><label class="admin-label">GUILD (for W/L)</label><select id="ea_org" class="admin-select"><option value="">— No guild —</option>${orgsData.map(o=>`<option value="${o.tag}">${o.tag} — ${o.name}</option>`).join('')}</select></div>
+      <div class="admin-field"><label class="admin-label">RESULT</label><select id="ea_result" class="admin-select"><option value="">— No result —</option><option value="win">WIN (+1 W)</option><option value="loss">LOSS (+1 L)</option></select></div>
+    </div>
+    <div id="ea_feedback" style="min-height:1.4rem;font-size:.83rem;margin:.5rem 0;"></div>
+    <div class="admin-modal-actions">
+      <button class="admin-submit-btn" onclick="saveEloAdjust()">APPLY</button>
+      <button class="admin-cancel-btn" onclick="closeLogForm()">CANCEL</button>
+    </div>`;
+  document.getElementById('logFormModal').classList.add('open');
+}
+
+async function saveEloAdjust() {
+  const name = g('ea_name').trim();
+  const delta = parseInt(g('ea_delta')) || 0;
+  const org = g('ea_org');
+  const result = g('ea_result');
+  const feedback = document.getElementById('ea_feedback');
+  if (!name) { feedback.style.color='#f87171'; feedback.textContent='⚠ Enter a player name.'; return; }
+  const res = await fetch('/api/players/elo-adjust', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+    body: JSON.stringify({ name, delta, org, result }),
+  });
+  const data = await res.json();
+  if (!res.ok) { feedback.style.color='#f87171'; feedback.textContent='❌ ' + (data.error || 'Player not found.'); return; }
+  feedback.style.color='#4ade80';
+  feedback.textContent=`✅ ${data.name} — ELO now ${data.elo}${result==='win'?' · +1 W':result==='loss'?' · +1 L':''}`;
+  await loadLeaderboard();
+}
+
+// ============================================================
+// SHOP
+// ============================================================
+function openShop()  { document.getElementById('shopModal').classList.add('open'); }
+function closeShop() { document.getElementById('shopModal').classList.remove('open'); }
 
 // ============================================================
 // AWARDS
@@ -1643,5 +1828,46 @@ async function deleteAdminUser(id) {
     loadBracketSeasons(),
     loadSchedule(),
     loadEloInfo(),
+    loadStatsSettings(),
   ]);
 })();
+
+async function loadStatsSettings() {
+  try {
+    const s = await apiGet('/settings/stats');
+    _statsSettings = { elo_per_kill: s.elo_per_kill ?? 2.5, elo_per_death: s.elo_per_death ?? -2.5 };
+  } catch { /* keep defaults */ }
+}
+
+function calcStatElo(kills, deaths) {
+  const k = Number(kills) || 0;
+  const d = Number(deaths) || 0;
+  return Math.round((k * _statsSettings.elo_per_kill + d * _statsSettings.elo_per_death) * 10) / 10;
+}
+
+async function openStatsSettings() {
+  const cur = _statsSettings;
+  document.getElementById('logFormContent').innerHTML = `
+    <div class="admin-modal-header" style="margin-bottom:1rem;">
+      <div class="admin-modal-icon">⚙</div>
+      <div class="admin-modal-title">STAT ELO SETTINGS</div>
+    </div>
+    <div class="admin-form-grid-2">
+      <div class="admin-field"><label class="admin-label">ELO PER KILL</label><input id="ss_kill" class="admin-input" type="number" step="0.1" value="${cur.elo_per_kill}"></div>
+      <div class="admin-field"><label class="admin-label">ELO PER DEATH</label><input id="ss_death" class="admin-input" type="number" step="0.1" value="${cur.elo_per_death}"></div>
+    </div>
+    <p style="font-size:.75rem;color:rgba(160,200,255,0.5);margin:.4rem 0 .8rem;">Example: 10 kills × ${cur.elo_per_kill} = <strong>${10*cur.elo_per_kill > 0 ? '+' : ''}${10*cur.elo_per_kill}</strong> ELO</p>
+    <div class="admin-modal-actions">
+      <button class="admin-submit-btn" onclick="saveStatsSettings()">SAVE</button>
+      <button class="admin-cancel-btn" onclick="closeLogForm()">CANCEL</button>
+    </div>`;
+  document.getElementById('logFormModal').classList.add('open');
+}
+
+async function saveStatsSettings() {
+  const kill  = parseFloat(document.getElementById('ss_kill')?.value) || 2.5;
+  const death = parseFloat(document.getElementById('ss_death')?.value) || -2.5;
+  await apiPut('/settings/stats', { elo_per_kill: kill, elo_per_death: death });
+  _statsSettings = { elo_per_kill: kill, elo_per_death: death };
+  closeLogForm();
+}

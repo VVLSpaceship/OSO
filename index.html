@@ -81,11 +81,10 @@
             <button class="filter-btn active" onclick="sortStats(this,'wins')">W/L</button>
             <button class="filter-btn" onclick="sortStats(this,'events')">EVENTS</button>
             <button class="filter-btn" onclick="sortStats(this,'members')">MEMBERS</button>
-            <button class="filter-btn" onclick="sortStats(this,'wager')">WAGER</button>
           </div>
           <div class="stats-table-wrap">
             <table class="stats-table">
-              <thead><tr><th>#</th><th>ORG</th><th>W/L</th><th>EVTS</th><th>MBR</th><th>MVP</th><th>WAGER</th></tr></thead>
+              <thead><tr><th>#</th><th>ORG</th><th>W/L</th><th>EVTS</th><th>MBR</th><th>MVP</th></tr></thead>
               <tbody id="statsBody"></tbody>
             </table>
           </div>
@@ -199,10 +198,11 @@
           <button class="filter-btn" onclick="setWarFilter(this,'region','SA')">SA</button>
         </div>
         <button id="addWarLogBtn" class="log-add-btn" style="display:none;" onclick="openLogForm('war')">+ ADD ENTRY</button>
+        <button id="eloStatsSettingsBtn" class="log-add-btn" style="display:none;margin-left:.4rem;" onclick="openStatsSettings()">⚙ ELO SETTINGS</button>
       </div>
       <div id="warLogsWrap" class="stats-table-wrap" style="margin-top:.8rem;">
         <table class="stats-table">
-          <thead><tr><th>DATE</th><th>MATCH</th><th>SCORE</th><th>WINNER</th><th>WAGER</th><th>ELO</th><th>REGION</th><th>SEASON</th><th>NOTES</th><th id="warActTh" style="display:none;"></th></tr></thead>
+          <thead><tr><th>DATE</th><th>MATCH</th><th>SCORE</th><th>WINNER</th><th>ELO</th><th>REGION</th><th>SEASON</th><th>NOTES</th><th id="warActTh" style="display:none;"></th></tr></thead>
           <tbody id="warLogsBody"></tbody>
         </table>
       </div>
@@ -308,6 +308,7 @@
           <div class="search-icon"><svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
         </div>
         <button id="addPlayerBtn" class="log-add-btn" style="display:none;" onclick="openPlayerForm()">+ ADD PLAYER</button>
+        <button id="adjustEloBtn" class="log-add-btn" style="display:none;margin-left:.4rem;" onclick="openEloAdjustForm()">⚡ ADJUST ELO</button>
       </div>
       <div class="stats-table-wrap">
         <table class="leaderboard-table">
@@ -455,6 +456,26 @@
     </div>
   </div>
 
+  <!-- Shop Modal -->
+  <div id="shopModal" class="modal-overlay" onclick="if(event.target===this)closeShop()">
+    <div class="modal-box admin-modal-box" style="max-width:400px;text-align:center;">
+      <button class="modal-close" onclick="closeShop()">✕</button>
+      <div style="font-size:2.8rem;margin-bottom:.6rem;">🔒</div>
+      <div class="admin-modal-title" style="margin-bottom:.6rem;">VVL SHOP</div>
+      <div style="font-size:.95rem;color:var(--text);line-height:1.6;letter-spacing:.04em;margin-bottom:1.2rem;">
+        Now isn't the time.<br>Come back later.
+      </div>
+      <div style="font-size:.75rem;color:rgba(160,200,255,.3);letter-spacing:.1em;">VVL POINTS · HOG SHARDS · COMING SOON</div>
+    </div>
+  </div>
+
+  <!-- Shop FAB (subtle — bottom-left) -->
+  <button class="shop-fab" onclick="openShop()" title="VVL Shop">💎</button>
+
   <script src="script.js"></script>
+  <a href="https://discord.gg/SSMRHAPmX" target="_blank" rel="noopener" class="discord-fab" title="Join our Discord">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.03.056a19.9 19.9 0 0 0 5.993 3.03.077.077 0 0 0 .084-.028 13.96 13.96 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+    Discord
+  </a>
 </body>
 </html>
