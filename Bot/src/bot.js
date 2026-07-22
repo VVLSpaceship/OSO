@@ -18,11 +18,18 @@ import { handleInteractions, handleWagerAmountMessage } from './Interaction.js';
 import { setupDatabase, checkExpiredTickets, autoDodgeWar, autoDodgeWager, getPendingTicketsForReminder, getSetting, getExpiredCooldownsToNotify, markCooldownNotified, getExpiredDodgesToNotify, markDodgeNotified, getExpiredPendingInvites, setInviteStatus } from './database.js';
 import dotenv from 'dotenv';
 import { existsSync } from 'fs';
+
 dotenv.config();
+
+console.log("ENV TEST");
+console.log("DISCORD_TOKEN:", process.env.DISCORD_TOKEN ? "FOUND" : "MISSING");
+console.log("CLIENT_ID:", process.env.CLIENT_ID ? "FOUND" : "MISSING");
+
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const DEFAULT_DB_PATH = existsSync('/var/data') ? '/var/data/guilds.db' : 'guilds.db';
 const DB_PATH = (process.env.DB_PATH || DEFAULT_DB_PATH).trim();
+
 if (!TOKEN || !CLIENT_ID) {
     throw new Error('DISCORD_TOKEN and CLIENT_ID are required in .env');
 }
